@@ -1,4 +1,5 @@
-This repo contains code to run decoding on the full IBL reproducible ephys datasets.
+Decode the full IBL reproducible ephys (RE) datasets.
+
 
 ### Environment setup
 

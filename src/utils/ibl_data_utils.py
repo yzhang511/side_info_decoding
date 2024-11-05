@@ -15,6 +15,9 @@ from brainbox.io.one import SpikeSortingLoader, SessionLoader
 from iblatlas.regions import BrainRegions
 from brainbox.population.decode import get_spike_counts_in_bins
 
+from reproducible_ephys_functions import filter_recordings
+from fig_PCA.fig_PCA_load_data import load_dataframe
+
 
 def globalize(func):
     def result(*args, **kwargs):
@@ -55,21 +58,35 @@ def load_spiking_data(one, pid, compute_metrics=False, qc=None, **kwargs):
     eid = kwargs.pop('eid', '')
     pname = kwargs.pop('pname', '')
     spike_loader = SpikeSortingLoader(pid=pid, one=one, eid=eid, pname=pname)
-    sampling_freq = spike_loader.raw_electrophysiology(band="ap", stream=True).fs
+    sampling_freq = spike_loader.raw_electrophysiology(band="ap", stream=False).fs
     
     spikes, clusters, channels = spike_loader.load_spike_sorting()
+    #####
+    concat_df = load_dataframe()
+    concat_df = filter_recordings(concat_df, min_regions=0)
+    concat_df = concat_df[concat_df["responsive"]].reset_index()
+    responsive_cluster_ids = list(concat_df[concat_df["pid"] == pid].cluster_ids)
     clusters_labeled = SpikeSortingLoader.merge_clusters(
         spikes, clusters, channels, compute_metrics=compute_metrics).to_df()
-    if qc is None:
-        return spikes, clusters_labeled, sampling_freq
-    else:
-        iok = clusters_labeled['label'] >= qc
-        selected_clusters = clusters_labeled[iok]
-        spike_idx, ib = ismember(spikes['clusters'], selected_clusters.index)
-        selected_clusters.reset_index(drop=True, inplace=True)
-        selected_spikes = {k: v[spike_idx] for k, v in spikes.items()}
-        selected_spikes['clusters'] = selected_clusters.index[ib].astype(np.int32)
-        return selected_spikes, selected_clusters, sampling_freq
+    iok = np.array([True if l in responsive_cluster_ids else False for l in clusters_labeled['cluster_id']])
+    selected_clusters = clusters_labeled[iok]
+    spike_idx, ib = ismember(spikes['clusters'], selected_clusters.index)
+    selected_clusters.reset_index(drop=True, inplace=True)
+    selected_spikes = {k: v[spike_idx] for k, v in spikes.items()}
+    selected_spikes['clusters'] = selected_clusters.index[ib].astype(np.int32)
+    return selected_spikes, selected_clusters, sampling_freq
+    #####
+    
+    # if qc is None:
+    #     return spikes, clusters_labeled, sampling_freq
+    # else:
+    #     iok = clusters_labeled['label'] >= qc
+    #     selected_clusters = clusters_labeled[iok]
+    #     spike_idx, ib = ismember(spikes['clusters'], selected_clusters.index)
+    #     selected_clusters.reset_index(drop=True, inplace=True)
+    #     selected_spikes = {k: v[spike_idx] for k, v in spikes.items()}
+    #     selected_spikes['clusters'] = selected_clusters.index[ib].astype(np.int32)
+    #     return selected_spikes, selected_clusters, sampling_freq
 
 
 def merge_probes(spikes_list, clusters_list):
@@ -121,7 +138,7 @@ def merge_probes(spikes_list, clusters_list):
 
 
 def load_trials_and_mask(
-        one, eid, min_rt=0.08, max_rt=2., nan_exclude='default', min_trial_len=None,
+        one, eid, min_rt=0.0, max_rt=10., nan_exclude='default', min_trial_len=None,
         max_trial_len=None, exclude_unbiased=False, exclude_nochoice=True, sess_loader=None):
     """
     Function to load all trials for a given session and create a mask to exclude all trials that have a reaction time
@@ -169,11 +186,7 @@ def load_trials_and_mask(
     if nan_exclude == 'default':
         nan_exclude = [
             'stimOn_times',
-            'choice',
-            'feedback_times',
-            'probabilityLeft',
             'firstMovement_times',
-            'feedbackType'
         ]
 
     if sess_loader is None:
@@ -204,6 +217,10 @@ def load_trials_and_mask(
     # Remove trials where animal does not respond
     if exclude_nochoice:
         query += ' | (choice == 0)'
+    # RE criteria
+    query += ' | (feedbackType == 1)'
+    query += ' | (contrastLeft > 0)'
+    query += ' | (contrastRight > 0)'
     # If min_rt was None we have to clean up the string
     if min_rt is None:
         query = query[3:]
