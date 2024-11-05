@@ -22,9 +22,9 @@ USER INPUTS
 ap = argparse.ArgumentParser()
 ap.add_argument(
     "--target", type=str, default="choice", 
-    choices=["choice", "wheel-speed", "whisker-motion-energy", "pupil-diameter"]
+    choices=["choice", "block", "reward", "wheel-speed"]
 )
-ap.add_argument("--query_region", nargs="+", default=["CA1", "LP", "PO"])
+ap.add_argument("--query_region", nargs="+", default=["PO", "LP", "DG", "CA1", "VISa"])
 ap.add_argument("--method", type=str, default="reduced_rank", choices=["reduced_rank"])
 ap.add_argument("--n_workers", type=int, default=1)
 ap.add_argument("--base_path", type=str, default="EXAMPLE_PATH")
@@ -42,7 +42,7 @@ config = update_config("src/configs/decoder.yaml", config)
 
 if args.target in ["wheel-speed", "whisker-motion-energy", "pupil-diameter"]:
     config = update_config("src/configs/reg_trainer.yaml", config)
-elif args.target in ['choice']:
+elif args.target in ["choice", "block", "reward"]:
     config = update_config("src/configs/clf_trainer.yaml", config)
 else:
     raise NotImplementedError

@@ -3,7 +3,7 @@ seed: 42
 dirs:
   checkpoint_dir: checkpoints  
   log_dir: train_logs  
-  data_dir: cached_ibl_data
+  data_dir: cached_re_data
   output_dir: results
 
 training:

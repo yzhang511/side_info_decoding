@@ -1,20 +1,22 @@
 #!/bin/bash
 
-#SBATCH --job-name=multi-region
-#SBATCH --output=multi-region-%j.out
-#SBATCH -N 1
-#SBATCH -n 1
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=8
-#SBATCH -t 0-1:00:00 
-#SBATCH --mem=16g
+#SBATCH --account=stats             
+#SBATCH --job-name="re_cache"
+#SBATCH --output="re_cache.%j.out"
+#SBATCH --nodes=1
+#SBATCH --tasks-per-node=1
+#SBATCH --cpus-per-task=1        
+#SBATCH --mem-per-cpu=20G       
+#SBATCH --time=2-0:00              
+
+module load anaconda
 
 . ~/.bashrc
-conda activate decoding
+echo $TMPDIR
+conda activate ibl_repro_ephys
+cd /burg/stats/users/yz4123/neural_decoding/src
 
-cd ..
-
-python src/3_decode_multi_region.py --target choice --query_region CA1 LP PO --base_path XXX 
+python 2_decode_multi_region.py --target choice --query_region PO LP DG CA1 VISa --base_path /burg/stats/users/yz4123/Downloads 
 
 cd script
 

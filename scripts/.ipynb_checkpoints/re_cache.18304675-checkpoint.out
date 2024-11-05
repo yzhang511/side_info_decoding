@@ -1,3 +1,0 @@
-/local
-/burg/home/yz4123/.conda/envs/ibl_repro_ephys/lib/python3.9/site-packages/one/alf/files.py:10: FutureWarning: `one.alf.files` will be removed in version 3.0. Use `one.alf.path` instead.
-  warnings.warn(

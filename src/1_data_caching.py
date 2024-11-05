@@ -46,9 +46,7 @@ params = {
     'align_time': 'stimOn_times', 'time_window': (-.5, 1.5)
 }
 
-beh_names = [
-    'choice', 'reward', 'block', 'wheel-speed', 'whisker-motion-energy', 
-]
+beh_names = ['choice', 'reward', 'block', 'wheel-speed']
 
 include_eids = np.unique(concat_df.eid)
 
@@ -56,6 +54,9 @@ print(f"Preprocess a total of {len(include_eids)} EIDs.")
 
 num_neurons = []
 for eid_idx, eid in enumerate(include_eids):
+
+    if eid_idx+1 <= 17:
+        continue
 
     print('==========================')
     print(f'Preprocess session {eid}:')

@@ -61,32 +61,30 @@ def load_spiking_data(one, pid, compute_metrics=False, qc=None, **kwargs):
     sampling_freq = 30_000
     
     spikes, clusters, channels = spike_loader.load_spike_sorting()
-    #####
-    concat_df = load_dataframe()
-    concat_df = filter_recordings(concat_df, min_regions=0)
-    concat_df = concat_df[concat_df["responsive"]].reset_index()
-    responsive_cluster_ids = list(concat_df[concat_df["pid"] == pid].cluster_ids)
+
     clusters_labeled = SpikeSortingLoader.merge_clusters(
-        spikes, clusters, channels, compute_metrics=compute_metrics).to_df()
-    iok = np.array([True if l in responsive_cluster_ids else False for l in clusters_labeled['cluster_id']])
-    selected_clusters = clusters_labeled[iok]
-    spike_idx, ib = ismember(spikes['clusters'], selected_clusters.index)
-    selected_clusters.reset_index(drop=True, inplace=True)
-    selected_spikes = {k: v[spike_idx] for k, v in spikes.items()}
-    selected_spikes['clusters'] = selected_clusters.index[ib].astype(np.int32)
-    return selected_spikes, selected_clusters, sampling_freq
-    #####
+            spikes, clusters, channels, compute_metrics=compute_metrics).to_df()
     
-    # if qc is None:
-    #     return spikes, clusters_labeled, sampling_freq
-    # else:
-    #     iok = clusters_labeled['label'] >= qc
-    #     selected_clusters = clusters_labeled[iok]
-    #     spike_idx, ib = ismember(spikes['clusters'], selected_clusters.index)
-    #     selected_clusters.reset_index(drop=True, inplace=True)
-    #     selected_spikes = {k: v[spike_idx] for k, v in spikes.items()}
-    #     selected_spikes['clusters'] = selected_clusters.index[ib].astype(np.int32)
-    #     return selected_spikes, selected_clusters, sampling_freq
+    if qc is None:
+        concat_df = load_dataframe()
+        concat_df = filter_recordings(concat_df, min_regions=0)
+        concat_df = concat_df[concat_df["responsive"]].reset_index()
+        responsive_cluster_ids = list(concat_df[concat_df["pid"] == pid].cluster_ids)
+        iok = np.array([True if l in responsive_cluster_ids else False for l in clusters_labeled['cluster_id']])
+        selected_clusters = clusters_labeled[iok]
+        spike_idx, ib = ismember(spikes['clusters'], selected_clusters.index)
+        selected_clusters.reset_index(drop=True, inplace=True)
+        selected_spikes = {k: v[spike_idx] for k, v in spikes.items()}
+        selected_spikes['clusters'] = selected_clusters.index[ib].astype(np.int32)
+        return selected_spikes, selected_clusters, sampling_freq
+    else:
+        iok = clusters_labeled['label'] >= qc
+        selected_clusters = clusters_labeled[iok]
+        spike_idx, ib = ismember(spikes['clusters'], selected_clusters.index)
+        selected_clusters.reset_index(drop=True, inplace=True)
+        selected_spikes = {k: v[spike_idx] for k, v in spikes.items()}
+        selected_spikes['clusters'] = selected_clusters.index[ib].astype(np.int32)
+        return selected_spikes, selected_clusters, sampling_freq
 
 
 def merge_probes(spikes_list, clusters_list):
@@ -750,7 +748,9 @@ def prepare_data(one, eid, bwm_df, params, n_workers=os.cpu_count()):
     clusters_list = []
     spikes_list = []
     for pid, probe_name in zip(pids, probe_names):
-        tmp_spikes, tmp_clusters, sampling_freq = load_spiking_data(one, pid, eid=eid, pname=probe_name)
+        tmp_spikes, tmp_clusters, sampling_freq = load_spiking_data(
+            one, pid, eid=eid, pname=probe_name, qc=1.
+        )
         tmp_clusters['pid'] = pid
         spikes_list.append(tmp_spikes)
         clusters_list.append(tmp_clusters)
