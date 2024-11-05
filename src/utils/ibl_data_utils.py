@@ -58,7 +58,7 @@ def load_spiking_data(one, pid, compute_metrics=False, qc=None, **kwargs):
     eid = kwargs.pop('eid', '')
     pname = kwargs.pop('pname', '')
     spike_loader = SpikeSortingLoader(pid=pid, one=one, eid=eid, pname=pname)
-    sampling_freq = spike_loader.raw_electrophysiology(band="ap", stream=False).fs
+    sampling_freq = 30_000
     
     spikes, clusters, channels = spike_loader.load_spike_sorting()
     #####
@@ -217,10 +217,10 @@ def load_trials_and_mask(
     # Remove trials where animal does not respond
     if exclude_nochoice:
         query += ' | (choice == 0)'
-    # RE criteria
-    query += ' | (feedbackType == 1)'
-    query += ' | (contrastLeft > 0)'
-    query += ' | (contrastRight > 0)'
+    # Remove trials according to RE criteria
+    query += ' | (feedbackType != 1)'
+    query += ' | (contrastLeft <= 0)'
+    query += ' | (contrastRight <= 0)'
     # If min_rt was None we have to clean up the string
     if min_rt is None:
         query = query[3:]

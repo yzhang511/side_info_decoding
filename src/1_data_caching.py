@@ -54,6 +54,7 @@ include_eids = np.unique(concat_df.eid)
 
 print(f"Preprocess a total of {len(include_eids)} EIDs.")
 
+num_neurons = []
 for eid_idx, eid in enumerate(include_eids):
 
     print('==========================')
@@ -75,6 +76,8 @@ for eid_idx, eid in enumerate(include_eids):
     aligned_binned_spikes, aligned_binned_behaviors = align_spike_behavior(
         binned_spikes, binned_behaviors, beh_names, trials_data['trials_mask']
     )
+    print("spike data shape: ", aligned_binned_spikes.shape)
+    num_neurons.append(aligned_binned_spikes.shape[-1])
 
     # Partition dataset (train: 0.7 val: 0.1 test: 0.2)
     max_num_trials = len(aligned_binned_spikes)
@@ -118,4 +121,5 @@ for eid_idx, eid in enumerate(include_eids):
 
     print(f'Cached session {eid}.')
     print(f'Progress: {eid_idx+1} / {len(include_eids)} sessions cached.')
-            
+
+print(f"Min: {min(num_neurons)} max: {max(num_neurons)} mean: {sum(num_neurons)/len(num_neurons)} # of neurons.")
