@@ -7,7 +7,7 @@ dirs:
   output_dir: results
 
 training:
-  num_epochs: 500
+  num_epochs: 10
   batch_size: 8
 
   device: cpu

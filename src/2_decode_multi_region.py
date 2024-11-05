@@ -91,7 +91,7 @@ base_config['optimizer']['lr'] = 1e-3
 base_config['optimizer']['weight_decay'] = 1e-1 
 
 if model_class == "reduced_rank":
-    base_config['temporal_rank'] = 3
+    base_config['temporal_rank'] = 2
     base_config['global_basis_rank'] = 5 
     base_config['tuner']['num_epochs'] = 500 
     base_config['training']['num_epochs'] = 1000 
