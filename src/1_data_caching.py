@@ -49,11 +49,18 @@ params = {
 beh_names = ['choice', 'reward', 'block', 'wheel-speed']
 
 include_eids = np.unique(concat_df.eid)
+bad_eids = [
+    "38d95489-2e82-412a-8c1a-c5377b5f1555",
+    "51e53aff-1d5d-4182-a684-aba783d50ae5"
+]
 
 print(f"Preprocess a total of {len(include_eids)} EIDs.")
 
 num_neurons = []
 for eid_idx, eid in enumerate(include_eids):
+
+    if eid in bad_eids:
+        continue
 
     print('==========================')
     print(f'Preprocess session {eid}:')
