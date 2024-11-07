@@ -6,7 +6,7 @@
 #SBATCH --nodes=1
 #SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=1        
-#SBATCH --mem-per-cpu=20G       
+#SBATCH --mem-per-cpu=30G       
 #SBATCH --time=0-5:00              
 
 module load anaconda

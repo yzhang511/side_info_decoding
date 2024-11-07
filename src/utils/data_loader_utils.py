@@ -99,7 +99,13 @@ class SingleSessionDataset(Dataset):
                 self.spike_data = get_binned_spikes(tmp_dataset['test'])
         else:
             self.spike_data = get_binned_spikes(dataset[split])
-            
+        
+        for re_idx, re_name in enumerate(self.neuron_regions):
+            if "DG" in re_name:
+                self.neuron_regions[re_idx] = "DG"
+            elif "VISa" in re_name:
+                self.neuron_regions[re_idx] = "VISa"
+
         if region and region != 'all':
             neuron_idxs = np.argwhere(self.neuron_regions == region).flatten()
             self.spike_data = self.spike_data[:,:,neuron_idxs]
@@ -176,10 +182,10 @@ class SingleSessionDataModule(LightningDataModule):
         return data_loader
 
     def val_dataloader(self):
-        return DataLoader(self.val, batch_size=self.batch_size, shuffle=False, drop_last=True)
+        return DataLoader(self.val, batch_size=self.batch_size, shuffle=False, drop_last=False)
 
     def test_dataloader(self):
-        return DataLoader(self.test, batch_size=self.batch_size, shuffle=False, drop_last=True)
+        return DataLoader(self.test, batch_size=self.batch_size, shuffle=False, drop_last=False)
 
 
 # ---------------------------
@@ -209,10 +215,10 @@ class MultiSessionDataModule(LightningDataModule):
                 DataLoader(dm.train, batch_size = self.batch_size, shuffle=True)
             )
             self.val.append(
-                DataLoader(dm.val, batch_size = self.batch_size, shuffle=False, drop_last=True)
+                DataLoader(dm.val, batch_size = self.batch_size, shuffle=False, drop_last=False)
             )
             self.test.append(
-                DataLoader(dm.test, batch_size = self.batch_size, shuffle=False, drop_last=True)
+                DataLoader(dm.test, batch_size = self.batch_size, shuffle=False, drop_last=False)
             )
 
     def train_dataloader(self):
@@ -264,10 +270,10 @@ class MultiRegionDataModule(LightningDataModule):
                 DataLoader(dm.train, batch_size = self.batch_size, shuffle=True)
             )
             self.val.append(
-                DataLoader(dm.val, batch_size = self.batch_size, shuffle=False, drop_last=True)
+                DataLoader(dm.val, batch_size = self.batch_size, shuffle=False, drop_last=False)
             )
             self.test.append(
-                DataLoader(dm.test, batch_size = self.batch_size, shuffle=False, drop_last=True)
+                DataLoader(dm.test, batch_size = self.batch_size, shuffle=False, drop_last=False)
             )
 
     def train_dataloader(self):

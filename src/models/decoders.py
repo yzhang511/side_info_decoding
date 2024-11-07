@@ -259,8 +259,8 @@ class BaselineMultiSessionDecoder(LightningModule):
             else:
                 raise NotImplementedError
         loss, metric = torch.mean(loss), torch.mean(metric)
-        self.log(f"{print_str}_loss", loss, prog_bar=True, logger=True, sync_dist=True)
-        self.log(f"{print_str}_metric", metric, prog_bar=True, logger=True, sync_dist=True)
+        self.log(f"{print_str}_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        self.log(f"{print_str}_metric", metric, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
         return loss
 
     def test_step(self, batch, batch_idx):

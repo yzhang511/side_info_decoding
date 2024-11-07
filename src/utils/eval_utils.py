@@ -152,7 +152,8 @@ def eval_multi_region_model(
     metric_dict, test_pred_dict, test_y_dict = {}, {}, {}
     for region in all_regions:
         metric_dict[region], test_pred_dict[region], test_y_dict[region] = {}, {}, {}
-        
+    
+    model.eval()
     for idx, (train, test) in enumerate(zip(train_lst, test_lst)):
         eid = configs[idx]['eid']
         region = configs[idx]['region']

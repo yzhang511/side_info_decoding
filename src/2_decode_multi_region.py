@@ -103,12 +103,14 @@ print(base_config)
 
 # set up trainer
 checkpoint_callback = ModelCheckpoint(
-    monitor=config.training.metric, mode=config.training.mode, dirpath=ckpt_path
+    monitor="val_loss", mode="min", save_top_k=1, filename="best_model",
 )
 trainer = Trainer(
-    max_epochs=config.training.num_epochs, 
+    max_epochs=config.training.num_epochs,
+    check_val_every_n_epoch=1,
     callbacks=[checkpoint_callback], 
-    enable_progress_bar=config.training.enable_progress_bar
+    enable_progress_bar=config.training.enable_progress_bar,
+    fast_dev_run=False
 )
 
 # set up data loader
@@ -123,7 +125,7 @@ regions_dict = dm.regions_dict
 
 configs = []
 for eid in eids:
-    for region in base_config['query_region']:
+    for region in query_region:
         # only load data from sessions containing this region
         if region in regions_dict[eid]:
             config = base_config.copy()
@@ -132,6 +134,8 @@ for eid in eids:
             configs.append(config)
 dm = MultiRegionDataModule(eids, configs)
 dm.setup()
+
+np.save(save_path/'configs.npy', dm.configs)
 
 # init and train model
 base_config = dm.configs[0].copy()
@@ -153,9 +157,14 @@ if model_class == "reduced_rank":
     model = MultiRegionReducedRankDecoder(base_config)
 else:
     raise NotImplementedError
-trainer.fit(model, datamodule=dm)
-trainer.test(datamodule=dm, ckpt_path='best')
 
+trainer.fit(model, datamodule=dm)
+
+best_model_path = checkpoint_callback.best_model_path
+print("Best model path: ", best_model_path)
+trainer.test(datamodule=dm, ckpt_path=best_model_path)
+
+model = MultiRegionReducedRankDecoder.load_from_checkpoint(best_model_path, config=base_config)
 
 """
 ----------

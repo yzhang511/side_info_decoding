@@ -34,7 +34,7 @@ one = ONE(
     cache_dir = args.base_path
 )
 
-freeze_file = '../data/bwm_release.csv'
+freeze_file = 'data/bwm_release.csv'
 bwm_df = pd.read_csv(freeze_file, index_col=0)
 
 concat_df = load_dataframe()
@@ -54,9 +54,6 @@ print(f"Preprocess a total of {len(include_eids)} EIDs.")
 
 num_neurons = []
 for eid_idx, eid in enumerate(include_eids):
-
-    if eid_idx+1 <= 17:
-        continue
 
     print('==========================')
     print(f'Preprocess session {eid}:')
@@ -86,6 +83,10 @@ for eid_idx, eid in enumerate(include_eids):
     train_idxs = trial_idxs[:int(0.7*max_num_trials)]
     val_idxs = trial_idxs[int(0.7*max_num_trials):int(0.8*max_num_trials)]
     test_idxs = trial_idxs[int(0.8*max_num_trials):]
+
+    if len(train_idxs) == 0 or len(val_idxs) == 0 or len(test_idxs) == 0:
+        print(f"Skip {eid} due to empty set.")
+        continue
 
     train_beh, val_beh, test_beh = {}, {}, {}
     for beh in aligned_binned_behaviors.keys():
