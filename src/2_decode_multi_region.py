@@ -88,13 +88,13 @@ base_config['training']['device'] = torch.device(
 )
 
 base_config['optimizer']['lr'] = 1e-3
-base_config['optimizer']['weight_decay'] = 1e-1 
+base_config['optimizer']['weight_decay'] = 1 
 
 if model_class == "reduced_rank":
     base_config['temporal_rank'] = 2
     base_config['global_basis_rank'] = 5 
     base_config['tuner']['num_epochs'] = 500 
-    base_config['training']['num_epochs'] = 1000 
+    base_config['training']['num_epochs'] = 2000 
 else:
     raise NotImplementedError
 
@@ -103,7 +103,7 @@ print(base_config)
 
 # set up trainer
 checkpoint_callback = ModelCheckpoint(
-    monitor="val_loss", mode="min", save_top_k=1, filename="best_model",
+    monitor="val_metric", mode="max", save_top_k=1, filename="best_model",
 )
 trainer = Trainer(
     max_epochs=config.training.num_epochs,
@@ -157,7 +157,6 @@ if model_class == "reduced_rank":
     model = MultiRegionReducedRankDecoder(base_config)
 else:
     raise NotImplementedError
-
 trainer.fit(model, datamodule=dm)
 
 best_model_path = checkpoint_callback.best_model_path

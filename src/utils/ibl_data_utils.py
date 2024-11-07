@@ -217,9 +217,9 @@ def load_trials_and_mask(
     if exclude_nochoice:
         query += ' | (choice == 0)'
     # Remove trials according to RE criteria
-    query += ' | (feedbackType != 1)'
-    query += ' | (contrastLeft <= 0)'
-    query += ' | (contrastRight <= 0)'
+    # query += ' | (feedbackType != 1)'
+    # query += ' | (contrastLeft <= 0)'
+    # query += ' | (contrastRight <= 0)'
     # If min_rt was None we have to clean up the string
     if min_rt is None:
         query = query[3:]

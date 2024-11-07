@@ -8,7 +8,7 @@ dirs:
 
 training:
   num_epochs: 10
-  batch_size: 8
+  batch_size: 32
 
   device: cpu
   metric: val_loss
@@ -32,9 +32,9 @@ data:
   num_workers: 1
 
 optimizer:
-  lr: 0.01
+  lr: 0.001
   scheduler: cosine  # step/cosine/linear
-  weight_decay: 0.1
+  weight_decay: 1
 
 tuner:
   num_epochs: 10     # increase if running on hpc

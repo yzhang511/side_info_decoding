@@ -7,7 +7,7 @@
 #SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=1        
 #SBATCH --mem-per-cpu=50G       
-#SBATCH --time=2-0:00              
+#SBATCH --time=0-1:00              
 
 module load anaconda
 
@@ -16,7 +16,7 @@ echo $TMPDIR
 conda activate ibl_repro_ephys
 cd /burg/stats/users/yz4123/neural_decoding
 
-python src/2_decode_multi_region.py --target block --query_region PO LP DG CA1 VISa --base_path /burg/stats/users/yz4123/Downloads 
+python src/2_decode_multi_region.py --target reward --query_region PO LP DG CA1 VISa --base_path /burg/stats/users/yz4123/Downloads 
 
 cd script
 
