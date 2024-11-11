@@ -46,7 +46,7 @@ params = {
     'align_time': 'stimOn_times', 'time_window': (-.5, 1.5)
 }
 
-beh_names = ['choice', 'reward', 'block', 'wheel-speed']
+beh_names = ['choice', 'reward', 'block', 'wheel-speed', 'whisker-motion-energy']
 
 include_eids = np.unique(concat_df.eid)
 bad_eids = [
@@ -72,15 +72,19 @@ for eid_idx, eid in enumerate(include_eids):
     binned_spikes, clusters_used_in_bins = bin_spiking_data(
         region_cluster_ids, neural_dict, trials_df=trials_data['trials_df'], n_workers=args.n_workers, **params
     )
-    binned_behaviors, behavior_masks = bin_behaviors(
-        one, eid, beh_names[3:], trials_df=trials_data['trials_df'], 
-        allow_nans=True, n_workers=args.n_workers, **params
-    )
-    
-    # Ensure neural and behavior data match for each trial
-    aligned_binned_spikes, aligned_binned_behaviors = align_spike_behavior(
-        binned_spikes, binned_behaviors, beh_names, trials_data['trials_mask']
-    )
+    try:
+        binned_behaviors, behavior_masks = bin_behaviors(
+            one, eid, beh_names[3:], trials_df=trials_data['trials_df'], 
+            allow_nans=True, n_workers=args.n_workers, **params
+        ) 
+        # Ensure neural and behavior data match for each trial
+        aligned_binned_spikes, aligned_binned_behaviors = align_spike_behavior(
+            binned_spikes, binned_behaviors, beh_names, trials_data['trials_mask']
+        )
+    except ValueError as e:
+        print(e)
+        continue
+
     print("spike data shape: ", aligned_binned_spikes.shape)
     num_neurons.append(aligned_binned_spikes.shape[-1])
 

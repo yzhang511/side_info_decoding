@@ -22,7 +22,7 @@ USER INPUTS
 ap = argparse.ArgumentParser()
 ap.add_argument(
     "--target", type=str, default="choice", 
-    choices=["choice", "block", "reward", "wheel-speed"]
+    choices=["choice", "block", "reward", "wheel-speed", "whisker-motion-energy"]
 )
 ap.add_argument("--query_region", nargs="+", default=["PO", "LP", "DG", "CA1", "VISa"])
 ap.add_argument("--method", type=str, default="reduced_rank", choices=["reduced_rank"])
@@ -87,12 +87,12 @@ base_config['training']['device'] = torch.device(
     'cuda' if np.logical_and(torch.cuda.is_available(), config.training.device=='gpu') else 'cpu'
 )
 
-base_config['optimizer']['lr'] = 1e-3
-base_config['optimizer']['weight_decay'] = 1 
+base_config['optimizer']['lr'] = 5e-4
+base_config['optimizer']['weight_decay'] = 1 # 0.01 
 
 if model_class == "reduced_rank":
-    base_config['temporal_rank'] = 2
-    base_config['global_basis_rank'] = 5 
+    base_config['temporal_rank'] = 2 # 5
+    base_config['global_basis_rank'] = 5 # 10
     base_config['tuner']['num_epochs'] = 500 
     base_config['training']['num_epochs'] = 2000 
 else:
