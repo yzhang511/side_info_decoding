@@ -750,7 +750,7 @@ def prepare_data(one, eid, bwm_df, params, n_workers=os.cpu_count()):
     spikes_list = []
     for pid, probe_name in zip(pids, probe_names):
         tmp_spikes, tmp_clusters, sampling_freq = load_spiking_data(
-            one, pid, eid=eid, pname=probe_name, #qc=1., 
+            one, pid, eid=eid, pname=probe_name, qc=1., 
         )
         tmp_clusters['pid'] = pid
         spikes_list.append(tmp_spikes)
