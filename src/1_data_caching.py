@@ -95,7 +95,7 @@ for eid_idx, eid in enumerate(include_eids):
     fold_size = len(trial_idxs) // num_folds
     folds = [trial_idxs[i * fold_size:(i + 1) * fold_size] for i in range(num_folds)]
      
-    for fold in range(num_folds-1):
+    for fold in range(num_folds):
 
         if (fold+1) != args.fold_idx:
             continue
