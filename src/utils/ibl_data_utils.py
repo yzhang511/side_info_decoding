@@ -700,13 +700,14 @@ def bin_behaviors(
 
     if trials_df is not None:        
         choice = trials_df['choice'].to_numpy()
-        block = trials_df['probabilityLeft'].to_numpy()
         reward = (trials_df['rewardVolume'] > 1).astype(int).to_numpy()
         contrast = np.c_[trials_df['contrastLeft'], trials_df['contrastRight']]
-        contrast = (-1 * np.nan_to_num(contrast, 0)).sum(1)
+        contrast = np.nan_to_num(contrast, 0)
+        stimside = np.argmax(contrast, 1)
+        contrast = contrast.sum(1)
 
         behave_dict.update(
-            {'choice': choice, 'block': block, 'reward': reward, 'contrast': contrast}
+            {'choice': choice, 'stimside': stimside, 'reward': reward, 'contrast': contrast}
         )
         behave_mask = np.ones(len(trials_df)) 
     else:
