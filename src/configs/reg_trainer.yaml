@@ -8,7 +8,7 @@ dirs:
 
 training:
   num_epochs: 500
-  batch_size: 8
+  batch_size: 32
 
   device: cpu
   metric: val_loss
@@ -19,7 +19,7 @@ training:
 model: 
   model_class: DECODER   
   target: reg            
-  output_size: 100       
+  output_size: 40       
 
 data:
   dataset_class: decoding 

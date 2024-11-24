@@ -101,9 +101,11 @@ class SingleSessionDataset(Dataset):
             self.spike_data = get_binned_spikes(dataset[split])
         
         for re_idx, re_name in enumerate(self.neuron_regions):
-            if "DG" in re_name:
+            if ("PO" in re_name) or ("PoT" in re_name) or ("POL" in re_name):
+                self.neuron_regions[re_idx] = "PO"
+            elif "DG" in re_name:
                 self.neuron_regions[re_idx] = "DG"
-            elif "VISa" in re_name:
+            elif ("VISa" in re_name) or ("VISam" in re_name):
                 self.neuron_regions[re_idx] = "VISa"
 
         if region and region != 'all':

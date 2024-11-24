@@ -7,17 +7,22 @@
 #SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=1        
 #SBATCH --mem-per-cpu=50G       
-#SBATCH --time=0-1:00              
+#SBATCH --time=0-08:00              
 
 module load anaconda
 
 . ~/.bashrc
 echo $TMPDIR
+
+fold_idx=${1}
+target=${2}
+num_epochs=${3}
+
 conda activate ibl_repro_ephys
 cd /burg/stats/users/yz4123/neural_decoding
 
-python src/2_decode_multi_region.py --target reward --query_region PO LP DG CA1 VISa --base_path /burg/stats/users/yz4123/Downloads 
+python src/2_decode_multi_region.py --target $target --query_region PO LP DG CA1 VISa --fold_idx $fold_idx --num_epochs $num_epochs --base_path /burg/stats/users/yz4123/Downloads 
 
-cd script
+cd ./script
 
 conda deactivate
