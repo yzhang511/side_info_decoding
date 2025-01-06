@@ -32,5 +32,5 @@
     - Optionally, the script also helps include the residual regions of the session that don't have the stimulis we want to gather behavior data to train.
 
 - An example visualization of the resulting splitting is shown below:
-![split_all.png](split_all.png)
+![split_all.png](assets/split_all.png)
 
