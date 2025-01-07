@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from one.api import ONE
 from datasets import DatasetDict
-from utils.ibl_data_utils import (
+from ibl_visual_behavior_neuropixels.utils import (
     prepare_data, 
     select_brain_regions, 
     list_brain_regions, 
@@ -14,7 +14,7 @@ from utils.ibl_data_utils import (
     bin_behaviors,
     align_spike_behavior
 )
-from utils.dataset_utils import create_dataset, upload_dataset
+from ibl_visual_behavior_neuropixels.dataset import create_dataset, upload_dataset
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--base_path", type=str, default="EXAMPLE_PATH")

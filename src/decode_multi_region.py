@@ -8,11 +8,11 @@ from pathlib import Path
 import torch
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch import Trainer
-from utils.data_loader_utils import MultiRegionDataModule
+from loader.base import MultiRegionDataModule
 from models.decoders import MultiRegionReducedRankDecoder
-from utils.eval_utils import eval_multi_region_model
+from utils.eval import eval_multi_region_model
 from utils.utils import set_seed
-from utils.config_utils import config_from_kwargs, update_config
+from utils.config import config_from_kwargs, update_config
 
 """
 -----------

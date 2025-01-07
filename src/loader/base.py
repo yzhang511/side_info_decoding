@@ -1,88 +1,112 @@
-"""Data loaders for single/multi-session models."""
+import os
+import sys
+import pickle
+import logging
 
+import uuid
 import numpy as np
-from pathlib import Path
+import multiprocessing
+from tqdm import tqdm
 from sklearn import preprocessing
-from sklearn.preprocessing import OneHotEncoder
+from iblutil.numerical import bincount2D
+
 import torch
+
 from torch.utils.data import Dataset, DataLoader
-from lightning.pytorch.utilities import CombinedLoader
 from lightning.pytorch import LightningDataModule
-import datasets
-from utils.dataset_utils import get_binned_spikes_from_sparse
+from lightning.pytorch.utilities import CombinedLoader
 
-seed = 42
-
-# ---------
-# Helpers
-# ---------
+logging.basicConfig(level=logging.INFO)
 
 def to_tensor(x, device):
     return torch.tensor(x).to(device)
 
-def standardize_spike_data(spike_data, means=None, stds=None):
+def globalize(func):
+    def result(*args, **kwargs):
+        return func(*args, **kwargs)
+    result.__name__ = result.__qualname__ = uuid.uuid4().hex
+    setattr(sys.modules[result.__module__], result.__name__, result)
+    return result
+
+def bin_spike_count(
+    times, 
+    units, 
+    start, 
+    end, 
+    length=None,
+    binsize=0.01, 
+    n_workers=1
+):
+    num_chunk = len(start)
+    if length is None:
+        length = int(min(end - start))
+    num_bin = int(np.ceil(length / binsize))
+
+    unit_index = np.unique(units)
+    unit_count = len(unit_index)
+
+    @globalize
+    def count_spike_per_chunk(chunk):
+        chunk_id, t_beg, t_end = chunk
+        mask = (times >= t_beg) & (times < t_end)
+        times_curr = times[mask]
+        clust_curr = units[mask]
+
+        if len(times_curr) == 0:
+            spike_per_chunk = np.zeros((unit_count, num_bin))
+            tbin_ids = np.arange(unit_count)
+        else:
+            spike_per_chunk, tbin_ids, unit_ids = bincount2D(
+                times_curr, clust_curr, xbin=binsize, xlim=[t_beg, t_end]
+            )
+            _, tbin_ids, _ = np.intersect1d(unit_index, unit_ids, return_indices=True)
+
+        return spike_per_chunk[:,:num_bin], tbin_ids, chunk_id
+
+    spike_count = np.zeros((num_chunk, unit_count, num_bin))
+
+    chunks = list(zip(np.arange(num_chunk), start, end))
     
-    K, T, N = spike_data.shape
-    if (means is None) and (stds == None):
-        means, stds = np.empty((T, N)), np.empty((T, N))
+    if n_workers == 1:
+        for chunk in chunks:
+            res = count_spike_per_chunk(chunk)
+            spike_count[res[-1], res[1], :] += res[0]
+    else:
+        with multiprocessing.Pool(processes=n_workers) as pool:
+            with tqdm(total=num_chunk) as pbar:
+                for res in pool.imap_unordered(count_spike_per_chunk, chunks):
+                    pbar.update()
+                    spike_count[res[-1], res[1], :] += res[0]
+            pbar.close()
 
-    std_spike_data = spike_data.reshape((K, -1))
-    std_spike_data[np.isnan(std_spike_data)] = 0
-    for t in range(T):
-        mean = np.mean(std_spike_data[:, t*N:(t+1)*N])
-        std = np.std(std_spike_data[:, t*N:(t+1)*N])
-        std_spike_data[:, t*N:(t+1)*N] -= mean
-        if std != 0:
-            std_spike_data[:, t*N:(t+1)*N] /= std
-        means[t], stds[t] = mean, std
-    std_spike_data = std_spike_data.reshape(K, T, N)
-    return std_spike_data, means, stds
+    return spike_count
 
-def get_binned_spikes(dataset):
-    spikes_sparse_data_list = dataset['spikes_sparse_data']
-    spikes_sparse_indices_list = dataset['spikes_sparse_indices']
-    spikes_sparse_indptr_list = dataset['spikes_sparse_indptr']
-    spikes_sparse_shape_list = dataset['spikes_sparse_shape']
-    
-    binned_spikes  = get_binned_spikes_from_sparse(
-        spikes_sparse_data_list, spikes_sparse_indices_list, spikes_sparse_indptr_list, spikes_sparse_shape_list
-    )
-    return binned_spikes.astype(float)
+def bin_target():
+    pass
 
-# ----------------------------
-# Single-session data loaders
-# ----------------------------
 
-class SingleSessionDataset(Dataset):
+class BaseDataset(Dataset):
     def __init__(
         self, 
-        data_dir, 
-        eid, 
-        beh_name, 
+        session_id,
         target, 
-        device, 
-        split='train', 
+        data_dir="./processed", 
+        split="train", 
         region=None,
-        load_local=False,
-        huggingface_org='neurofm123'
+        device="cpu", 
     ):
-        """Load and preprocess single-session datasets.
-            
-        Args:
-            data_dir: data path.
-            eid: session ID.
-            beh_name: behavior name to be loaded, e.g., 'choice', 'wheel-speed'.
-            target:
-                'cls': classification for discrete behavior.
-                'reg': regression for continuous behavior.
-            split: data partition; options = ['train', 'val', 'test'].
-            region: region name to be loaded, e.g., 'LP', 'CA1'.
-            load_local: whether load cached data locally or remotely from Hugging Face. 
-        """
-        if load_local:
-            dataset = datasets.load_from_disk(Path(data_dir)/eid)
-        else:
-            dataset = datasets.load_dataset(f'{huggingface_org}/{eid}_aligned', cache_dir=data_dir)
+        
+        with open(f"{data_dir}/{session_id}.pkl", "rb") as f:
+            session_dict = pickle.load(f)
+
+        spike_count = bin_spike_count(
+            session_dict["data"]["spikes"], 
+            session_dict["data"]["units"]["unit_index"], 
+            session_dict["data"]["drifting_gratings"]["start"], 
+            session_dict["data"]["drifting_gratings"]["end"], 
+            binsize=0.02,
+            n_workers=1
+        )
 
         self.train_spike = get_binned_spikes(dataset['train'])
         self.train_behavior = np.array(dataset['train'][beh_name])
@@ -112,11 +136,8 @@ class SingleSessionDataset(Dataset):
 
         self.behavior = np.array(dataset[split][beh_name])
 
-        self.train_spike, self.means, self.stds = standardize_spike_data(self.train_spike)
-        self.spike_data, _, _ = standardize_spike_data(self.spike_data, self.means, self.stds)
-
         if target == 'clf':
-            enc = OneHotEncoder(handle_unknown='ignore')
+            enc = preprocessing.OneHotEncoder(handle_unknown='ignore')
             self.behavior = enc.fit_transform(self.behavior.reshape(-1, 1)).toarray()
         elif target == 'reg' or self.behavior.shape[1] == self.n_t_steps:
             self.scaler = preprocessing.StandardScaler().fit(self.train_behavior)
@@ -154,15 +175,15 @@ class SingleSessionDataModule(LightningDataModule):
 
     def setup(self, stage=None):
         """Call this function to load and preprocess data."""
-        self.train = SingleSessionDataset(
+        self.train = BaseDataset(
             self.data_dir, self.eid, self.beh_name, self.target, 
             self.device, 'train', self.region, self.load_local
         )
-        self.val = SingleSessionDataset(
+        self.val = BaseDataset(
             self.data_dir, self.eid, self.beh_name, self.target, 
             self.device, 'val', self.region, self.load_local
         )
-        self.test = SingleSessionDataset(
+        self.test = BaseDataset(
             self.data_dir, self.eid, self.beh_name, self.target, 
             self.device, 'test', self.region, self.load_local
         )
@@ -181,10 +202,6 @@ class SingleSessionDataModule(LightningDataModule):
     def test_dataloader(self):
         return DataLoader(self.test, batch_size=self.batch_size, shuffle=False, drop_last=True)
 
-
-# ---------------------------
-# Multi-session data loaders
-# ---------------------------
 
 class MultiSessionDataModule(LightningDataModule):
     def __init__(self, eids, configs):
@@ -229,57 +246,19 @@ class MultiSessionDataModule(LightningDataModule):
 
 
 class MultiRegionDataModule(LightningDataModule):
-    def __init__(self, eids, configs):
-        """Load and preprocess multi-session datasets.
-            
-        Args:
-            eids: a list of session IDs.
-            configs: a list of data configs for each session-region combination.
-            query_region: a list of brain regions to decode from.
-        """
-        super().__init__()
-        self.eids = eids
-        self.configs = configs
-        self.batch_size = configs[0]['training']['batch_size']
-        self.query_region = configs[0]['query_region']
+    def __init__(self):
+        pass
 
-    def list_regions(self):
-        """Call this function to list all available brain regions from the input sessions."""
-        self.all_regions, self.regions_dict = [], {}
-        for idx, eid in enumerate(self.eids):
-            dm = SingleSessionDataModule(self.configs[idx])
-            dm.setup()
-            unique_regions = [roi for roi in np.unique(dm.train.neuron_regions) if roi not in ['root', 'void']]
-            self.regions_dict[eid] = unique_regions
-            self.all_regions.extend(unique_regions)
-        self.all_regions = list(np.unique(self.all_regions))
-        
     def setup(self, stage=None):
-        """Call this function to load and preprocess data."""
-        self.train, self.val, self.test = [], [], []
-        for config in self.configs:
-            dm = SingleSessionDataModule(config)
-            dm.setup()
-            self.train.append(
-                DataLoader(dm.train, batch_size = self.batch_size, shuffle=True)
-            )
-            self.val.append(
-                DataLoader(dm.val, batch_size = self.batch_size, shuffle=False, drop_last=True)
-            )
-            self.test.append(
-                DataLoader(dm.test, batch_size = self.batch_size, shuffle=False, drop_last=True)
-            )
+        pass
 
     def train_dataloader(self):
-        data_loader = CombinedLoader(self.train, mode = "max_size_cycle")
-        return data_loader
+        pass
 
     def val_dataloader(self):
-        data_loader = CombinedLoader(self.val)
-        return data_loader
+        pass
 
     def test_dataloader(self):
-        data_loader = CombinedLoader(self.test)
-        return data_loader
+        pass
         
     

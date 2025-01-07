@@ -17,12 +17,12 @@ from ray.train.lightning import (
     RayTrainReportCallback,
     prepare_trainer,
 )
-from utils.data_loader_utils import SingleSessionDataModule
+from loader.base import SingleSessionDataModule
 from models.decoders import ReducedRankDecoder, MLPDecoder, LSTMDecoder
-from utils.eval_utils import eval_model
-from utils.sweep_utils import tune_decoder
+from utils.eval import eval_model
+from utils.sweep import tune_decoder
 from utils.utils import set_seed
-from utils.config_utils import config_from_kwargs, update_config
+from utils.config import config_from_kwargs, update_config
 
 """
 -----------

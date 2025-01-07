@@ -15,12 +15,12 @@ from ray.train.lightning import (
     RayTrainReportCallback,
     prepare_trainer,
 )
-from utils.data_loader_utils import MultiSessionDataModule
+from loader.base import MultiSessionDataModule
 from models.decoders import MultiSessionReducedRankDecoder
-from utils.eval_utils import eval_multi_session_model
-from utils.sweep_utils import tune_decoder
+from utils.eval import eval_multi_session_model
+from utils.sweep import tune_decoder
 from utils.utils import set_seed
-from utils.config_utils import config_from_kwargs, update_config
+from utils.config import config_from_kwargs, update_config
 
 """
 -----------
