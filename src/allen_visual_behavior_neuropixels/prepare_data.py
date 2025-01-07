@@ -6,11 +6,13 @@ import os
 import pickle
 from typing import Dict
 
+import random
 import numpy as np
 import pandas as pd
 
 from allensdk.brain_observatory.ecephys.ecephys_project_cache import EcephysProjectCache
 from tqdm import tqdm
+from utils.utils import set_seed
 
 logging.basicConfig(level=logging.INFO)
 
@@ -331,7 +333,40 @@ def get_behavior_region(running_speed_dict, pupil_dict=None, gaze_dict=None):
     ), "Atleast one of running_speed, pupil or gaze data must be present."
     return session_start, session_end
 
+def sample_free_behavior_splits(
+    start, 
+    end, 
+    length=1, 
+    sample_frac=0.7,
+):
+
+    sampled_starts = list(range(int(start), int(end-length+1)))  
+    num_samples = int(len(sampled_starts) * sample_frac)
+    sampled_starts = random.sample(sampled_starts, min(num_samples, len(sampled_starts)))
+    
+    all_chunks = np.array([(beg, beg+length) for beg in sampled_starts])
+
+    random.shuffle(all_chunks)
+
+    num_chunk = len(all_chunks)
+    train_split = int(num_chunk * 0.7)
+    val_split = int(num_chunk * 0.1)
+    test_split = num_chunk - train_split - val_split 
+
+    train_chunks = all_chunks[:train_split]
+    val_chunks = all_chunks[train_split:train_split+val_split]
+    test_chunks = all_chunks[train_split+val_split:]
+
+    return {
+        "train": train_chunks,
+        "val": val_chunks,
+        "test": test_chunks
+    }
+
+
 def main():
+
+    set_seed(42)
 
     # Use argparse to extract two arguments from the command line:
     # input_dir and output_dir
@@ -395,6 +430,8 @@ def main():
             supervision_dict.get("gaze", None),
         )
 
+        free_behavior_splits = sample_free_behavior_splits(behavior_start, behavior_end)
+
         session_dict = {"data": {}, "splits": {}}
 
         session_dict["data"] = {
@@ -404,9 +441,8 @@ def main():
         }
 
         session_dict["splits"] = {
-            "stimuli_splits_by_key": stimuli_splits_by_key,
-            "behavior_start": behavior_start,
-            "behavior_end": behavior_end,
+            "free_behavior_splits": free_behavior_splits,
+            **stimuli_splits_by_key,
         }
 
         with open(f"{output_dir}/{session_id}.pkl", "wb") as f:

@@ -8,6 +8,7 @@ import numpy as np
 import multiprocessing
 from tqdm import tqdm
 from sklearn import preprocessing
+from scipy.interpolate import interp1d
 from iblutil.numerical import bincount2D
 
 import torch
@@ -15,6 +16,8 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from lightning.pytorch import LightningDataModule
 from lightning.pytorch.utilities import CombinedLoader
+
+from from utils.registry import target_registry
 
 logging.basicConfig(level=logging.INFO)
 
@@ -102,10 +105,17 @@ class BaseDataset(Dataset):
         spike_count = bin_spike_count(
             session_dict["data"]["spikes"], 
             session_dict["data"]["units"]["unit_index"], 
-            session_dict["data"]["drifting_gratings"]["start"], 
-            session_dict["data"]["drifting_gratings"]["end"], 
+            start=session_dict["splits"]["drifting_gratings"]["train"].T[0],
+            end=session_dict["splits"]["drifting_gratings"]["train"].T[1],
             binsize=0.02,
-            n_workers=1
+        )
+
+        target = bin_target(
+            session_dict["data"][target]["timestamps"], 
+            session_dict["data"][target][target], 
+            # start=, 
+            # end=, 
+            binsize=0.02,
         )
 
         self.train_spike = get_binned_spikes(dataset['train'])
