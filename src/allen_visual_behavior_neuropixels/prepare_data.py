@@ -340,27 +340,28 @@ def sample_free_behavior_splits(
     sample_frac=0.7,
 ):
 
-    sampled_starts = list(range(int(start), int(end-length+1)))  
-    num_samples = int(len(sampled_starts) * sample_frac)
-    sampled_starts = random.sample(sampled_starts, min(num_samples, len(sampled_starts)))
-    
-    all_chunks = np.array([(beg, beg+length) for beg in sampled_starts])
+    sampled_begs = np.arange(start, end-length, length)
+    sampled_ends = np.arange(start+length, end, length)
+    all_chunks = np.c_[sampled_begs, sampled_ends]
 
-    random.shuffle(all_chunks)
+    num_samples = int(len(all_chunks) * sample_frac)
 
-    num_chunk = len(all_chunks)
+    sampled_ids = np.random.choice(range(len(all_chunks)), num_samples, replace=False)
+    sampled_chunks = all_chunks[sampled_ids]
+
+    num_chunk = len(sampled_chunks)
     train_split = int(num_chunk * 0.7)
     val_split = int(num_chunk * 0.1)
     test_split = num_chunk - train_split - val_split 
 
-    train_chunks = all_chunks[:train_split]
-    val_chunks = all_chunks[train_split:train_split+val_split]
-    test_chunks = all_chunks[train_split+val_split:]
+    train_chunks = sampled_chunks[:train_split]
+    val_chunks = sampled_chunks[train_split:train_split+val_split]
+    test_chunks = sampled_chunks[train_split+val_split:]
 
     return {
-        "train": train_chunks,
-        "val": val_chunks,
-        "test": test_chunks
+        "train": np.array(sorted(train_chunks, key=lambda x: x[0])),
+        "val": np.array(sorted(val_chunks, key=lambda x: x[0])),
+        "test": np.array(sorted(test_chunks, key=lambda x: x[0])),
     }
 
 

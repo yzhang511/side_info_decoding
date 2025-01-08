@@ -84,8 +84,83 @@ def bin_spike_count(
 
     return spike_count
 
-def bin_target():
-    pass
+def bin_target(
+    times, 
+    values, 
+    start, 
+    end, 
+    binsize=0.01, 
+    length=None,
+    n_workers=1, 
+):
+    
+    num_chunk = len(start)
+    if length is None:
+        length = int(min(end - start))
+    num_bin = int(np.ceil(length / binsize))
+    
+    start_ids = np.searchsorted(times, start, side="right")
+    end_ids = np.searchsorted(times, end, side="left")
+    times_in = [times[s_id:e_id] for s_id, e_id in zip(start_ids, end_ids)]
+    values_in = [values[s_id:e_id] for s_id, e_id in zip(start_ids, end_ids)]
+
+    times_out = [None for _ in range(len(times_in))]
+    values_out = [None for _ in range(len(times_in))]
+    valid_mask = [None for _ in range(len(times_in))]
+    skip_reasons = [None for _ in range(len(times_in))]
+
+    @globalize
+    def interpolate_func(target):
+        chunk_id, time, val = target
+
+        is_valid, x_interp, y_interp = False, None, None
+        
+        if np.sum(np.isnan(val)) > 0:
+            skip_reason = "nans in target"
+            return chunk_id, is_valid, x_interp, y_interp, skip_reason
+        if np.isnan(start[chunk_id]) or np.isnan(end[chunk_id]):
+            skip_reason = "nans in timestamps"
+            return chunk_id, is_valid, x_interp, y_interp, skip_reason
+        if np.abs(start[chunk_id] - time[0]) > binsize:
+            skip_reason = "target starts too late"
+            return chunk_id, is_valid, x_interp, y_interp, skip_reason
+        if np.abs(end[chunk_id] - time[-1]) > binsize:
+            skip_reason = "target ends too early"
+            return chunk_id, is_valid, x_interp, y_interp, skip_reason
+
+        is_valid, skip_reason = True, None
+        x_interp = np.linspace(start[chunk_id] + binsize, end[chunk_id], num_bin)
+        if len(val.shape) > 1 and val.shape[1] > 1:
+            y_interp_list = []
+            for n in range(val.shape[1]):
+                y_interp_list.append(interp1d(time, val[:,n], kind="linear", fill_value="extrapolate")(x_interp))
+            y_interp = np.hstack([y[:,None] for y in y_interp_list])
+        else:
+            y_interp = interp1d(time, val, kind="linear", fill_value="extrapolate")(x_interp)
+        return chunk_id, is_valid, x_interp, y_interp, skip_reason
+    
+    chunks = list(zip(np.arange(num_chunk), times_in, values_in))
+
+    if n_workers == 1:
+        for chunk in tqdm(chunks, total=num_chunk):
+            res = interpolate_func(chunk)
+            valid_mask[res[0]] = res[1]
+            times_out[res[0]] = res[2]
+            values_out[res[0]] = res[3]
+            skip_reasons[res[0]] = res[-1]
+    else:
+        with multiprocessing.Pool(processes=n_workers) as p:
+            with tqdm(total=num_chunk) as pbar:
+                for res in p.imap_unordered(interpolate_func, chunks):
+                    pbar.update()
+                    valid_mask[res[0]] = res[1]
+                    times_out[res[0]] = res[2]
+                    values_out[res[0]] = res[3]
+                    skip_reasons[res[0]] = res[-1]
+            pbar.close()
+            p.close()
+
+    return times_out, values_out, np.array(valid_mask), skip_reasons  
 
 
 class BaseDataset(Dataset):
